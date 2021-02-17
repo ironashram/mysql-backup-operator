@@ -1,0 +1,11 @@
+domain: m1k.cloud
+layout: go.kubebuilder.io/v2
+projectName: mysql-backup-operator
+repo: github.com/ironashram/mysql-backup-operator
+resources:
+- group: m1kcloud
+  kind: MysqlBackup
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}
