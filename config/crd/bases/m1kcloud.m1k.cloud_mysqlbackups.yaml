@@ -36,13 +36,47 @@ spec:
         spec:
           description: MysqlBackupSpec defines the desired state of MysqlBackup
           properties:
-            foo:
-              description: Foo is an example field of MysqlBackup. Edit MysqlBackup_types.go
-                to remove/update
+            clusterRef:
               type: string
+            executor:
+              description: ExecutorSpec defines the desired backup method and scope
+              properties:
+                mysqldump:
+                  description: TargetSpec defines the desired backup method and scope
+                  properties:
+                    databases:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - databases
+                  type: object
+              required:
+              - mysqldump
+              type: object
+            storageRef:
+              type: string
+          required:
+          - clusterRef
+          - executor
+          - storageRef
           type: object
         status:
           description: MysqlBackupStatus defines the observed state of MysqlBackup
+          properties:
+            BackupStatus:
+              description: MysqlBackupStatusSpec defines the backup status
+              properties:
+                latestBackupStatus:
+                  type: string
+                performedBackups:
+                  type: integer
+              required:
+              - latestBackupStatus
+              - performedBackups
+              type: object
+          required:
+          - BackupStatus
           type: object
       type: object
   version: v1alpha1

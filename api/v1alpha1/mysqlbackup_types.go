@@ -25,17 +25,30 @@ import (
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Executor           ExecutorSpec `json:"executor"`
+	MysqlCluster       string       `json:"clusterRef"`
+	MysqlBackupStorage string       `json:"storageRef"`
+}
 
-	// Foo is an example field of MysqlBackup. Edit MysqlBackup_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// ExecutorSpec defines the desired backup method and scope
+type ExecutorSpec struct {
+	Target TargetSpec `json:"mysqldump"`
+}
+
+// TargetSpec defines the desired backup method and scope
+type TargetSpec struct {
+	Databases []string `json:"databases"`
+}
+
+// MysqlBackupStatusSpec defines the backup status
+type MysqlBackupStatusSpec struct {
+	LatestBackupStatus string `json:"latestBackupStatus"`
+	BackupCount        int    `json:"performedBackups"`
 }
 
 // MysqlBackupStatus defines the observed state of MysqlBackup
 type MysqlBackupStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	BackupStatus MysqlBackupStatusSpec `json:"BackupStatus"`
 }
 
 // +kubebuilder:object:root=true
