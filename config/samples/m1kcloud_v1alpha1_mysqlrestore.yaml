@@ -1,7 +1,0 @@
-apiVersion: m1kcloud.m1k.cloud/v1alpha1
-kind: MysqlRestore
-metadata:
-  name: mysqlrestore-sample
-spec:
-  # Add fields here
-  foo: bar
