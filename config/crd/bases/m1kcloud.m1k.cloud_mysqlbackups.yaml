@@ -71,13 +71,16 @@ spec:
             storageRef:
               description: StorageRefSpec defines the StorageRef
               properties:
-                clusterstatus:
+                bucket:
                   type: string
-                storageBackend:
+                region:
+                  type: string
+                storageProvider:
                   type: string
               required:
-              - clusterstatus
-              - storageBackend
+              - bucket
+              - region
+              - storageProvider
               type: object
             username:
               type: string
@@ -86,6 +89,7 @@ spec:
           - clusterRef
           - databasesToBackup
           - host
+          - port
           - secretRef
           - storageRef
           - username
@@ -93,24 +97,18 @@ spec:
         status:
           description: MysqlBackupStatus defines the observed state of MysqlBackup
           properties:
+            backupJobStatus:
+              type: string
             backupStatus:
-              description: MysqlBackupStatusSpec defines the backup status
-              properties:
-                backupJobStatus:
-                  type: string
-                backupStatus:
-                  type: string
-                successfulBackupLocations:
-                  items:
-                    type: string
-                  type: array
-              required:
-              - backupJobStatus
-              - backupStatus
-              - successfulBackupLocations
-              type: object
+              type: string
+            successfulBackupLocations:
+              items:
+                type: string
+              type: array
           required:
+          - backupJobStatus
           - backupStatus
+          - successfulBackupLocations
           type: object
       type: object
   version: v1alpha1

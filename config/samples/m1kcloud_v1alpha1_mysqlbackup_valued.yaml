@@ -1,0 +1,21 @@
+apiVersion: m1kcloud.m1k.cloud/v1alpha1
+kind: MysqlBackup
+metadata:
+  name: mysqlbackup-valued-sample
+spec:
+  clusterRef:
+    clusterStatus: Ready
+    clusterName: mysql-cluster-m1k
+  secretRef:
+    name: mysql-cluster-m1k
+    namespace: database
+  databaseToBackup:
+    - puppaaaa
+    - test
+  storageRef:
+    storageProvider: s3
+    region: us-west-1
+    bucket: michele-test-bakckup-operator
+  host: 10.106.171.2
+  port: 3306
+  username: root

@@ -26,7 +26,7 @@ import (
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
 	Host              string         `json:"host"`
-	Port              int            `json:"port,omitempty"`
+	Port              int            `json:"port"`
 	Username          string         `json:"username"`
 	BackupType        string         `json:"backupType"`
 	ClusterRef        ClusterRefSpec `json:"clusterRef"`
@@ -43,8 +43,9 @@ type ClusterRefSpec struct {
 
 // StorageRefSpec defines the StorageRef
 type StorageRefSpec struct {
-	StorageBackend string `json:"storageBackend"`
-	ClusterStatus  string `json:"clusterstatus"`
+	StorageProvider string `json:"storageProvider"`
+	Region          string `json:"region"`
+	Bucket          string `json:"bucket"`
 }
 
 // SecretRefSpec defines the SecretRef
@@ -53,16 +54,11 @@ type SecretRefSpec struct {
 	Namespace string `json:"namespace"`
 }
 
-// MysqlBackupStatusSpec defines the backup status
-type MysqlBackupStatusSpec struct {
+// MysqlBackupStatus defines the observed state of MysqlBackup
+type MysqlBackupStatus struct {
 	BackupStatus              string   `json:"backupStatus"`
 	BackupJobStatus           string   `json:"backupJobStatus"`
 	SuccessfulBackupLocations []string `json:"successfulBackupLocations"`
-}
-
-// MysqlBackupStatus defines the observed state of MysqlBackup
-type MysqlBackupStatus struct {
-	BackupStatus MysqlBackupStatusSpec `json:"backupStatus"`
 }
 
 // +kubebuilder:object:root=true
