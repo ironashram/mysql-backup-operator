@@ -1,0 +1,7 @@
+apiVersion: m1kcloud.m1k.cloud/v1alpha1
+kind: MysqlBackupStore
+metadata:
+  name: mysqlbackupstore-sample
+spec:
+  # Add fields here
+  foo: bar

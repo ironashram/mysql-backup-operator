@@ -6,6 +6,15 @@ resources:
 - group: m1kcloud
   kind: MysqlBackup
   version: v1alpha1
+- group: m1kcloud
+  kind: MysqlCluster
+  version: v1alpha1
+- group: m1kcloud
+  kind: MysqlBackupStore
+  version: v1alpha1
+- group: m1kcloud
+  kind: MysqlRestore
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

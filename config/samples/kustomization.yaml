@@ -1,4 +1,7 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
 - m1kcloud_v1alpha1_mysqlbackup.yaml
+- m1kcloud_v1alpha1_mysqlcluster.yaml
+- m1kcloud_v1alpha1_mysqlbackupstore.yaml
+- m1kcloud_v1alpha1_mysqlrestore.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

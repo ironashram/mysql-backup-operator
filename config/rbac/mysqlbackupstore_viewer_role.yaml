@@ -1,0 +1,20 @@
+# permissions for end users to view mysqlbackupstores.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mysqlbackupstore-viewer-role
+rules:
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlbackupstores
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlbackupstores/status
+  verbs:
+  - get
