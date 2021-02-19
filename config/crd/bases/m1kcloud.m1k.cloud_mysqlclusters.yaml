@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
-  name: mysqlbackups.m1kcloud.m1k.cloud
+  name: mysqlclusters.m1kcloud.m1k.cloud
 spec:
   group: m1kcloud.m1k.cloud
   names:
-    kind: MysqlBackup
-    listKind: MysqlBackupList
-    plural: mysqlbackups
-    singular: mysqlbackup
+    kind: MysqlCluster
+    listKind: MysqlClusterList
+    plural: mysqlclusters
+    singular: mysqlcluster
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: MysqlBackup is the Schema for the mysqlbackups API
+      description: MysqlCluster is the Schema for the mysqlclusters API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -34,49 +34,37 @@ spec:
         metadata:
           type: object
         spec:
-          description: MysqlBackupSpec defines the desired state of MysqlBackup
+          description: MysqlClusterSpec defines the desired state of MysqlCluster
           properties:
-            clusterRef:
+            host:
               type: string
-            executor:
-              description: ExecutorSpec defines the desired backup method and scope
+            port:
+              type: integer
+            secretRef:
+              description: MysqlSecretRefSpec defines the MysqlSecret ref
               properties:
-                mysqldump:
-                  description: TargetSpec defines the desired backup method and scope
-                  properties:
-                    databases:
-                      items:
-                        type: string
-                      type: array
-                  required:
-                  - databases
-                  type: object
+                namespace:
+                  type: string
+                secret:
+                  type: string
               required:
-              - mysqldump
+              - namespace
+              - secret
               type: object
-            storageRef:
+            username:
               type: string
           required:
-          - clusterRef
-          - executor
-          - storageRef
+          - host
+          - secretRef
+          - username
           type: object
         status:
-          description: MysqlBackupStatus defines the observed state of MysqlBackup
+          description: MysqlClusterStatus defines the observed state of MysqlCluster
           properties:
-            backupStatus:
-              description: MysqlBackupStatusSpec defines the backup status
-              properties:
-                latestBackupStatus:
-                  type: string
-                performedBackups:
-                  type: integer
-              required:
-              - latestBackupStatus
-              - performedBackups
-              type: object
+            clusterStatus:
+              type: string
           required:
-          - backupStatus
+          - clusterStatus
           type: object
       type: object
   version: v1alpha1

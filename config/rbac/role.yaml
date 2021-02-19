@@ -26,3 +26,63 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlbackupstores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlbackupstores/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlrestores
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - m1kcloud.m1k.cloud
+  resources:
+  - mysqlrestores/status
+  verbs:
+  - get
+  - patch
+  - update
