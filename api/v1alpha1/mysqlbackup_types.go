@@ -25,25 +25,39 @@ import (
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
-	Executor   ExecutorSpec `json:"executor"`
-	ClusterRef string       `json:"clusterRef"`
-	StorageRef string       `json:"storageRef"`
+	Host              string         `json:"host"`
+	Port              int            `json:"port,omitempty"`
+	Username          string         `json:"username"`
+	BackupType        string         `json:"backupType"`
+	ClusterRef        ClusterRefSpec `json:"clusterRef"`
+	StorageRef        StorageRefSpec `json:"storageRef"`
+	DatabasesToBackup []string       `json:"databasesToBackup"`
+	SecretRef         SecretRefSpec  `json:"secretRef"`
 }
 
-// ExecutorSpec defines the desired backup method and scope
-type ExecutorSpec struct {
-	Mysqldump TargetSpec `json:"mysqldump"`
+// ClusterRefSpec defines the ClusterRef
+type ClusterRefSpec struct {
+	ClusterName   string `json:"clusterName"`
+	ClusterStatus string `json:"clusterStatus"`
 }
 
-// TargetSpec defines the desired backup method and scope
-type TargetSpec struct {
-	Databases []string `json:"databases"`
+// StorageRefSpec defines the StorageRef
+type StorageRefSpec struct {
+	StorageBackend string `json:"storageBackend"`
+	ClusterStatus  string `json:"clusterstatus"`
+}
+
+// SecretRefSpec defines the SecretRef
+type SecretRefSpec struct {
+	Secret    string `json:"secret"`
+	Namespace string `json:"namespace"`
 }
 
 // MysqlBackupStatusSpec defines the backup status
 type MysqlBackupStatusSpec struct {
-	LatestBackupStatus string `json:"latestBackupStatus"`
-	PerformedBackups   int    `json:"performedBackups"`
+	BackupStatus              string   `json:"backupStatus"`
+	BackupJobStatus           string   `json:"backupJobStatus"`
+	SuccessfulBackupLocations []string `json:"successfulBackupLocations"`
 }
 
 // MysqlBackupStatus defines the observed state of MysqlBackup

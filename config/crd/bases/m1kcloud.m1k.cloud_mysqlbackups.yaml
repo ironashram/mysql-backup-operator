@@ -36,30 +36,59 @@ spec:
         spec:
           description: MysqlBackupSpec defines the desired state of MysqlBackup
           properties:
-            clusterRef:
+            backupType:
               type: string
-            executor:
-              description: ExecutorSpec defines the desired backup method and scope
+            clusterRef:
+              description: ClusterRefSpec defines the ClusterRef
               properties:
-                mysqldump:
-                  description: TargetSpec defines the desired backup method and scope
-                  properties:
-                    databases:
-                      items:
-                        type: string
-                      type: array
-                  required:
-                  - databases
-                  type: object
+                clusterName:
+                  type: string
+                clusterStatus:
+                  type: string
               required:
-              - mysqldump
+              - clusterName
+              - clusterStatus
+              type: object
+            databasesToBackup:
+              items:
+                type: string
+              type: array
+            host:
+              type: string
+            port:
+              type: integer
+            secretRef:
+              description: SecretRefSpec defines the SecretRef
+              properties:
+                namespace:
+                  type: string
+                secret:
+                  type: string
+              required:
+              - namespace
+              - secret
               type: object
             storageRef:
+              description: StorageRefSpec defines the StorageRef
+              properties:
+                clusterstatus:
+                  type: string
+                storageBackend:
+                  type: string
+              required:
+              - clusterstatus
+              - storageBackend
+              type: object
+            username:
               type: string
           required:
+          - backupType
           - clusterRef
-          - executor
+          - databasesToBackup
+          - host
+          - secretRef
           - storageRef
+          - username
           type: object
         status:
           description: MysqlBackupStatus defines the observed state of MysqlBackup
@@ -67,13 +96,18 @@ spec:
             backupStatus:
               description: MysqlBackupStatusSpec defines the backup status
               properties:
-                latestBackupStatus:
+                backupJobStatus:
                   type: string
-                performedBackups:
-                  type: integer
+                backupStatus:
+                  type: string
+                successfulBackupLocations:
+                  items:
+                    type: string
+                  type: array
               required:
-              - latestBackupStatus
-              - performedBackups
+              - backupJobStatus
+              - backupStatus
+              - successfulBackupLocations
               type: object
           required:
           - backupStatus

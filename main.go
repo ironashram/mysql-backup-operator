@@ -75,30 +75,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "MysqlBackup")
 		os.Exit(1)
 	}
-	if err = (&controllers.MysqlClusterReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("MysqlCluster"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MysqlCluster")
-		os.Exit(1)
-	}
-	if err = (&controllers.MysqlBackupStoreReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("MysqlBackupStore"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MysqlBackupStore")
-		os.Exit(1)
-	}
-	if err = (&controllers.MysqlRestoreReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("MysqlRestore"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MysqlRestore")
-		os.Exit(1)
-	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
