@@ -25,14 +25,14 @@ import (
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
-	Executor           ExecutorSpec `json:"executor"`
-	MysqlCluster       string       `json:"clusterRef"`
-	MysqlBackupStorage string       `json:"storageRef"`
+	Executor   ExecutorSpec `json:"executor"`
+	ClusterRef string       `json:"clusterRef"`
+	StorageRef string       `json:"storageRef"`
 }
 
 // ExecutorSpec defines the desired backup method and scope
 type ExecutorSpec struct {
-	Target TargetSpec `json:"mysqldump"`
+	Mysqldump TargetSpec `json:"mysqldump"`
 }
 
 // TargetSpec defines the desired backup method and scope
@@ -43,12 +43,12 @@ type TargetSpec struct {
 // MysqlBackupStatusSpec defines the backup status
 type MysqlBackupStatusSpec struct {
 	LatestBackupStatus string `json:"latestBackupStatus"`
-	BackupCount        int    `json:"performedBackups"`
+	PerformedBackups   int    `json:"performedBackups"`
 }
 
 // MysqlBackupStatus defines the observed state of MysqlBackup
 type MysqlBackupStatus struct {
-	BackupStatus MysqlBackupStatusSpec `json:"BackupStatus"`
+	BackupStatus MysqlBackupStatusSpec `json:"backupStatus"`
 }
 
 // +kubebuilder:object:root=true

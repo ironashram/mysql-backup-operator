@@ -25,17 +25,21 @@ import (
 
 // MysqlClusterSpec defines the desired state of MysqlCluster
 type MysqlClusterSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Host      string             `json:"host"`
+	Port      int                `json:"port,omitempty"`
+	Username  string             `json:"username"`
+	SecretRef MysqlSecretRefSpec `json:"secretRef"`
+}
 
-	// Foo is an example field of MysqlCluster. Edit MysqlCluster_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// MysqlSecretRefSpec defines the MysqlSecret ref
+type MysqlSecretRefSpec struct {
+	Secret    string `json:"secret"`
+	Namespace string `json:"namespace"`
 }
 
 // MysqlClusterStatus defines the observed state of MysqlCluster
 type MysqlClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	ClusterStatus string `json:"clusterStatus"`
 }
 
 // +kubebuilder:object:root=true
