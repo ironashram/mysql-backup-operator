@@ -7,15 +7,16 @@ spec:
     clusterStatus: Ready
     clusterName: mysql-cluster-m1k
   secretRef:
-    name: mysql-cluster-m1k
+    secret: mysql-cluster-m1k
     namespace: database
-  databaseToBackup:
+  databasesToBackup:
     - puppaaaa
     - test
   storageRef:
     storageProvider: s3
     region: us-west-1
-    bucket: michele-test-bakckup-operator
+    bucket: michele-test-backup-operator
+  backupType: mysqldump
   host: 10.106.171.2
   port: 3306
   username: root
