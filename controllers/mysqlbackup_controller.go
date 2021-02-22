@@ -21,6 +21,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	m1kcloudv1alpha1 "github.com/ironashram/mysql-backup-operator/api/v1alpha1"
 )
 
@@ -71,6 +75,30 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// mysqlBackupJob returns a mysql backup job object
+func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      m.Name,
+			Namespace: m.Namespace,
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
+						Name:    "mysqldumpJob",
+						Command: []string{"mysqldump", "-u", "root", "-h", "10.106.171.2", "-P", "3306", "--password=Fuffa123", "puppaaaa", "|", "gzip", "-c", ">", "puppaaaa.sql.gz"},
+					}},
+				},
+			},
+		},
+	}
+	// Set mysqlBackupJob instance as the owner and controller
+	ctrl.SetControllerReference(m, job, r.Scheme)
+	return job
 }
 
 // SetupWithManager sets up the controller with the Manager.

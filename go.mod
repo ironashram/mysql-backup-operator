@@ -19,6 +19,7 @@ require (
 	go.starlark.net v0.0.0-20210212215732-ebe61bd709bf // indirect
 	golang.org/x/arch v0.0.0-20210220002609-d79151a12d1b // indirect
 	golang.org/x/sys v0.0.0-20210220050731-9a76102bfb43 // indirect
+	k8s.io/api v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6
 	sigs.k8s.io/controller-runtime v0.6.3
