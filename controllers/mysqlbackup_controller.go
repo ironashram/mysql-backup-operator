@@ -55,6 +55,21 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
+	// Check mysqlbackup status and act accordingly
+	status := mysqlbackup.Spec.InitState
+	switch status {
+	case "newBackup":
+		log.Info("MysqlBackup status is newBackup")
+	case "creatingBackup":
+		log.Info("MysqlBackup status is creatingBackup")
+	case "failedBackup":
+		log.Info("MysqlBackup status is failedBackup")
+	case "readyBackup":
+		log.Info("MysqlBackup status is readyBackup")
+	default:
+		log.Info("MysqlBackup status is not in recognized state")
+	}
+
 	return ctrl.Result{}, nil
 }
 

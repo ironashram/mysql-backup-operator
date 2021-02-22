@@ -3,6 +3,7 @@ kind: MysqlBackup
 metadata:
   name: mysqlbackup-valued-sample
 spec:
+  initState: newBackup
   clusterRef:
     clusterStatus: Ready
     clusterName: mysql-cluster-m1k

@@ -33,6 +33,7 @@ type MysqlBackupSpec struct {
 	StorageRef        StorageRefSpec `json:"storageRef"`
 	DatabasesToBackup []string       `json:"databasesToBackup"`
 	SecretRef         SecretRefSpec  `json:"secretRef"`
+	InitState         string         `json:"initState"`
 }
 
 // ClusterRefSpec defines the ClusterRef

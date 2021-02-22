@@ -55,6 +55,8 @@ spec:
               type: array
             host:
               type: string
+            initState:
+              type: string
             port:
               type: integer
             secretRef:
@@ -89,6 +91,7 @@ spec:
           - clusterRef
           - databasesToBackup
           - host
+          - initState
           - port
           - secretRef
           - storageRef
