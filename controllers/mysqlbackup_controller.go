@@ -18,6 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,6 +65,24 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	switch status {
 	case "newBackup":
 		log.Info("MysqlBackup status is newBackup")
+		// Check if the Job already exists, if not create a new one
+		found := &batchv1.Job{}
+		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new Job
+			job := r.mysqlBackupJob(mysqlbackup)
+			log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+			err = r.Create(ctx, job)
+			if err != nil {
+				log.Error(err, "Failed to create new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+				return ctrl.Result{}, err
+			}
+			// Job created successfully - return and requeue
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Job")
+			return ctrl.Result{}, err
+		}
 	case "creatingBackup":
 		log.Info("MysqlBackup status is creatingBackup")
 	case "failedBackup":
@@ -87,10 +106,12 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					RestartPolicy: "Never",
 					Containers: []corev1.Container{{
-						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
-						Name:    "mysqldumpJob",
-						Command: []string{"mysqldump", "-u", "root", "-h", "10.106.171.2", "-P", "3306", "--password=Fuffa123", "puppaaaa", "|", "gzip", "-c", ">", "puppaaaa.sql.gz"},
+						Image: "quay.io/ironashram/test-alpine:v0.0.2",
+						Name:  "mysqldumpjob-" + m.Name,
+						//Command: []string{"mysqldump", "-u", "root", "-h", "10.106.171.2", "-P", "3306", "--password=Fuffa123", "puppaaaa", "|", "gzip", "-c", ">", "puppaaaa.sql.gz"},
+						Command: []string{"ls", "-lah"},
 					}},
 				},
 			},
