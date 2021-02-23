@@ -1,3 +1,4 @@
+#!/bin/sh
 make undeploy 
 make all
 make generate && make manifests

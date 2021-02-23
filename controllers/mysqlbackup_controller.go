@@ -119,17 +119,17 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 			Namespace: m.Namespace,
 		},
 		Spec: batchv1.JobSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
-			},
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: ls,
+				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
 					Containers: []corev1.Container{{
-						Name:    "mysql-backupjob-" + m.Name,
+						Name:    "mysqldump",
 						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
 						Command: []string{"/bin/sh", "-c"},
-						Args: []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
+						Args: []string{"mysqldump -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
 							m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
 						Env: []corev1.EnvVar{{
 							Name: "MYSQL_PASSWORD",

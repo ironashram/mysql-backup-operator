@@ -1,7 +1,8 @@
 apiVersion: m1kcloud.m1k.cloud/v1alpha1
 kind: MysqlBackup
 metadata:
-  name: mysqlbackup-valued-sample
+  generateName: mysqlbackup-
+  #name: mysqlbackup
   namespace: database
 spec:
   initState: newBackup
