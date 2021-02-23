@@ -29,6 +29,8 @@ import (
 	m1kcloudv1alpha1 "github.com/ironashram/mysql-backup-operator/api/v1alpha1"
 )
 
+var log = ctrl.Log.WithName("controller")
+
 // MysqlBackupReconciler reconciles a MysqlBackup object
 type MysqlBackupReconciler struct {
 	client.Client
@@ -42,7 +44,7 @@ type MysqlBackupReconciler struct {
 // Reconcile MysqlBackup CRD
 func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("mysqlbackup", req.NamespacedName)
+	//log := ctrl.Log.WithValues("mysqlbackup", req.NamespacedName)
 
 	// fetch mysqlbackup
 	mysqlbackup := &m1kcloudv1alpha1.MysqlBackup{}
@@ -52,11 +54,11 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			log.Info("MysqlBackup resource not found. Ignoring since object must be deleted")
+			log.Info("MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "MysqlBackup resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "Failed to get MysqlBackup")
+		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get MysqlBackup")
 		return ctrl.Result{}, err
 	}
 
@@ -64,33 +66,33 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	status := mysqlbackup.Spec.InitState
 	switch status {
 	case "newBackup":
-		log.Info("MysqlBackup status is newBackup")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 		// Check if the Job already exists, if not create a new one
 		found := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new Job
 			job := r.mysqlBackupJob(mysqlbackup)
-			log.Info("Creating a new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+			log.Info("MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Creating a new Job")
 			err = r.Create(ctx, job)
 			if err != nil {
-				log.Error(err, "Failed to create new Job", "Job.Namespace", job.Namespace, "Job.Name", job.Name)
+				log.Error(err, "MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Failed to create new Job")
 				return ctrl.Result{}, err
 			}
 			// Job created successfully - return and requeue
 			return ctrl.Result{Requeue: true}, nil
 		} else if err != nil {
-			log.Error(err, "Failed to get Job")
+			log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job")
 			return ctrl.Result{}, err
 		}
 	case "creatingBackup":
-		log.Info("MysqlBackup status is creatingBackup")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	case "failedBackup":
-		log.Info("MysqlBackup status is failedBackup")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	case "readyBackup":
-		log.Info("MysqlBackup status is readyBackup")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	default:
-		log.Info("MysqlBackup status is not in recognized state")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	}
 
 	return ctrl.Result{}, nil

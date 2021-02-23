@@ -16,3 +16,4 @@
 bin
 testbin
 __debug_bin
+bin/manager
