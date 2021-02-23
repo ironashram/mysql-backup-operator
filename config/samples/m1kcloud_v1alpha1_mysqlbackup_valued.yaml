@@ -2,6 +2,7 @@ apiVersion: m1kcloud.m1k.cloud/v1alpha1
 kind: MysqlBackup
 metadata:
   name: mysqlbackup-valued-sample
+  namespace: database
 spec:
   initState: newBackup
   clusterRef:
@@ -9,7 +10,6 @@ spec:
     clusterName: mysql-cluster-m1k
   secretRef:
     secret: mysql-cluster-m1k
-    namespace: database
   databasesToBackup:
     - puppaaaa
     - test

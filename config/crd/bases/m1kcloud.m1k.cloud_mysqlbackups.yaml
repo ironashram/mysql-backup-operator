@@ -62,12 +62,9 @@ spec:
             secretRef:
               description: SecretRefSpec defines the SecretRef
               properties:
-                namespace:
-                  type: string
                 secret:
                   type: string
               required:
-              - namespace
               - secret
               type: object
             storageRef:

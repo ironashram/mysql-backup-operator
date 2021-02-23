@@ -111,11 +111,17 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 						Name:    "mysql-backupjob-" + m.Name,
 						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
 						Command: []string{"/bin/sh", "-c"},
-						//mysqldump -u root -h 10.106.171.2 -P 3306 -p$MYSQL_PASSWORD puppaaaa| pigz -9 -p 4 > puppaaaa.sql.gz > /tmp/error.log
-						Args: []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " + m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
+						Args:    []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " + m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
 						Env: []corev1.EnvVar{{
-							Name:  "MYSQL_PASSWORD",
-							Value: "Fuffa123",
+							Name: "MYSQL_PASSWORD",
+							ValueFrom: &corev1.EnvVarSource{
+								SecretKeyRef: &corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: m.Spec.SecretRef.Secret,
+									},
+									Key: "ROOT_PASSWORD",
+								},
+							},
 						}},
 						TerminationMessagePath:   "/tmp/error.log",
 						TerminationMessagePolicy: "File",

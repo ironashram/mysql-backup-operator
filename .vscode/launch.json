@@ -10,7 +10,7 @@
         "port": 47689,
         "program": "${workspaceFolder}/main.go",
         "env": {
-          "WATCH_NAMESPACE": "mysql-backup-operator-system",
+          "WATCH_NAMESPACE": "default",
           "KUBERNETES_CONFIG": "~/.kube/config-files/m1k.cloud.yaml"
         },
         "args": []

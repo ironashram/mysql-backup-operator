@@ -51,8 +51,7 @@ type StorageRefSpec struct {
 
 // SecretRefSpec defines the SecretRef
 type SecretRefSpec struct {
-	Secret    string `json:"secret"`
-	Namespace string `json:"namespace"`
+	Secret string `json:"secret"`
 }
 
 // MysqlBackupStatus defines the observed state of MysqlBackup
