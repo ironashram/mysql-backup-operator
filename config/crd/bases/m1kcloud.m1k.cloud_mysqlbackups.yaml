@@ -58,7 +58,7 @@ spec:
             initState:
               type: string
             port:
-              type: integer
+              type: string
             secretRef:
               description: SecretRefSpec defines the SecretRef
               properties:

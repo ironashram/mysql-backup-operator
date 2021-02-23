@@ -26,7 +26,7 @@ import (
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
 	Host              string         `json:"host"`
-	Port              int            `json:"port"`
+	Port              string         `json:"port"`
 	Username          string         `json:"username"`
 	BackupType        string         `json:"backupType"`
 	ClusterRef        ClusterRefSpec `json:"clusterRef"`

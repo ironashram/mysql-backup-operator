@@ -108,10 +108,17 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
 					Containers: []corev1.Container{{
-						Image: "quay.io/ironashram/test-alpine:v0.0.2",
-						Name:  "mysqldumpjob-" + m.Name,
-						//Command: []string{"mysqldump", "-u", "root", "-h", "10.106.171.2", "-P", "3306", "--password=Fuffa123", "puppaaaa", "|", "gzip", "-c", ">", "puppaaaa.sql.gz"},
-						Command: []string{"ls", "-lah"},
+						Name:    "mysql-backupjob-" + m.Name,
+						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
+						Command: []string{"/bin/sh", "-c"},
+						//mysqldump -u root -h 10.106.171.2 -P 3306 -p$MYSQL_PASSWORD puppaaaa| pigz -9 -p 4 > puppaaaa.sql.gz > /tmp/error.log
+						Args: []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " + m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
+						Env: []corev1.EnvVar{{
+							Name:  "MYSQL_PASSWORD",
+							Value: "Fuffa123",
+						}},
+						TerminationMessagePath:   "/tmp/error.log",
+						TerminationMessagePolicy: "File",
 					}},
 				},
 			},
