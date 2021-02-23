@@ -112,12 +112,16 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 // mysqlBackupJob returns a mysql backup job object
 func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
+	ls := joblabels(m.Name)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      m.Name,
 			Namespace: m.Namespace,
 		},
 		Spec: batchv1.JobSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: ls,
+			},
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
@@ -148,6 +152,11 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 	// Set mysqlBackupJob instance as the owner and controller
 	ctrl.SetControllerReference(m, job, r.Scheme)
 	return job
+}
+
+// return the label to filter backupjobs
+func joblabels(name string) map[string]string {
+	return map[string]string{"app": "mysqlBackup", "mysqlBackup_crd": name}
 }
 
 // SetupWithManager sets up the controller with the Manager.
