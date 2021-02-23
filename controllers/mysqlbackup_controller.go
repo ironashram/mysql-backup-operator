@@ -66,7 +66,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	status := mysqlbackup.Spec.InitState
 	switch status {
 	case "newBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Check Backup Job existence")
 		// Check if the Job already exists, if not create a new one
 		found := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
@@ -80,10 +80,13 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				return ctrl.Result{}, err
 			}
 			// Job created successfully - return and requeue
+			log.Info("MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Return and Requeue")
 			return ctrl.Result{Requeue: true}, nil
 		} else if err != nil {
 			log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job")
 			return ctrl.Result{}, err
+		} else {
+			log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Job already present, nothing to do")
 		}
 	case "creatingBackup":
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
