@@ -67,6 +67,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Check mysqlbackup status and act accordingly
 	status := mysqlbackup.Spec.InitState
 	switch status {
+
 	case "newBackup":
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 			"MysqlBackup.Name", mysqlbackup.Name, "msg", "Check Backup Job existence")
@@ -93,19 +94,40 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 				"MysqlBackup.Name", mysqlbackup.Name, "msg", "Job already present, nothing to do")
 		}
+
 	case "creatingBackup":
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+
 	case "failedBackup":
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+
 	case "readyBackup":
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+
 	default:
 		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
 			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	}
+
+	// List the jobs for this mysqlbackup crd
+	jobList := &batchv1.JobList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(mysqlbackup.Namespace),
+		client.MatchingLabels(joblabels(mysqlbackup.Name)),
+	}
+	if err = r.List(ctx, jobList, listOpts...); err != nil {
+		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job list")
+		return ctrl.Result{}, err
+	}
+
+	// Update mysqlbackup crd status if needed
+	jobStatus := getjobStatus(jobList.Items)
+	log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+		"MysqlBackup.Name", mysqlbackup.Name, "msg", jobStatus)
 
 	return ctrl.Result{}, nil
 }
@@ -152,6 +174,16 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 	// Set mysqlBackupJob instance as the owner and controller
 	ctrl.SetControllerReference(m, job, r.Scheme)
 	return job
+}
+
+// getJobStatus returns job names, status of the array of jobs passed in
+func getjobStatus(jobs []batchv1.Job) map[string]string {
+	var jobStatusMap map[string]string
+	jobStatusMap = make(map[string]string)
+	for _, job := range jobs {
+		jobStatusMap[job.Name] = job.Status.String()
+	}
+	return jobStatusMap
 }
 
 // return the label to filter backupjobs
