@@ -54,11 +54,13 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			log.Info("MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "MysqlBackup resource not found. Ignoring since object must be deleted")
+			log.Info("MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name",
+				mysqlbackup.Name, "msg", "MysqlBackup resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get MysqlBackup")
+		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name",
+			mysqlbackup.Name, "msg", "Failed to get MysqlBackup")
 		return ctrl.Result{}, err
 	}
 
@@ -66,7 +68,8 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	status := mysqlbackup.Spec.InitState
 	switch status {
 	case "newBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Check Backup Job existence")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "Check Backup Job existence")
 		// Check if the Job already exists, if not create a new one
 		found := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
@@ -83,19 +86,25 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			log.Info("MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Return and Requeue")
 			return ctrl.Result{Requeue: true}, nil
 		} else if err != nil {
-			log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job")
+			log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace,
+				"MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job")
 			return ctrl.Result{}, err
 		} else {
-			log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "Job already present, nothing to do")
+			log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+				"MysqlBackup.Name", mysqlbackup.Name, "msg", "Job already present, nothing to do")
 		}
 	case "creatingBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	case "failedBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	case "readyBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	default:
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
+			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
 	}
 
 	return ctrl.Result{}, nil
@@ -116,7 +125,8 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 						Name:    "mysql-backupjob-" + m.Name,
 						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
 						Command: []string{"/bin/sh", "-c"},
-						Args:    []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " + m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
+						Args: []string{m.Spec.BackupType + " -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
+							m.Spec.DatabasesToBackup[0] + "| pigz -9 -p 4 > " + m.Spec.DatabasesToBackup[0] + ".sql.gz 2> /tmp/error.log"},
 						Env: []corev1.EnvVar{{
 							Name: "MYSQL_PASSWORD",
 							ValueFrom: &corev1.EnvVarSource{
