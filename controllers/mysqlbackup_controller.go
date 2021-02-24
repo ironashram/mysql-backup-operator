@@ -61,9 +61,6 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 	// Get Status
 	status := mysqlbackup.Status.BackupStatus
-	if status == "" {
-		status = "newBackup"
-	}
 
 	// Add status to all logging
 	log := log.WithValues("mysqlbackupCR", req.NamespacedName, "mysqlbackupStatus", status)
@@ -79,7 +76,58 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
+	// Update mysqlbackup crd status with job results
+	if len(jobList.Items) > 0 {
+		// retrieve job status for all jobs
+		jobStatus := getjobStatus(jobList.Items)
+		for obj, objStatus := range jobStatus {
+			if objStatus.Succeeded == 1 {
+				if !contains(mysqlbackup.Spec.SuccessfulJobs, obj) {
+					mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
+					mysqlbackup.Spec.SuccessfulBackupCount = mysqlbackup.Spec.SuccessfulBackupCount + 1
+					log.Info("Backup Job successful, adding to cr")
+					err := r.Update(ctx, mysqlbackup)
+					if err != nil {
+						log.Error(err, "Failed to update mysqlbackup")
+						return ctrl.Result{}, err
+					}
+					mysqlbackup.Status.BackupStatus = "readyBackup"
+					err = r.Status().Update(ctx, mysqlbackup)
+					if err != nil {
+						log.Error(err, "Failed to update mysqlbackup BackupStatus")
+						return ctrl.Result{}, err
+					}
+				}
+			} else if objStatus.Failed == 1 {
+				if !contains(mysqlbackup.Spec.FailedJobs, obj) {
+					mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
+					log.Info("Backup Job failed, adding to cr")
+					err := r.Update(ctx, mysqlbackup)
+					if err != nil {
+						log.Error(err, "Failed to update mysqlbackup")
+						return ctrl.Result{}, err
+					}
+					mysqlbackup.Status.BackupStatus = "failedBackup"
+					err = r.Status().Update(ctx, mysqlbackup)
+					if err != nil {
+						log.Error(err, "Failed to update mysqlbackup BackupStatus")
+						return ctrl.Result{}, err
+					}
+				}
+			} else if objStatus.Active == 1 {
+				log.Info("Backup Job still running")
+				return ctrl.Result{Requeue: true}, nil
+			}
+		}
+	}
+
 	// Check mysqlbackup status and act accordingly
+	if status == "" {
+		status = "newBackup"
+	} else {
+		status = mysqlbackup.Status.BackupStatus
+	}
+
 	switch status {
 
 	case "newBackup":
@@ -88,10 +136,10 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		mysqlbackup.Status.BackupStatus = "creatingBackup"
 		err := r.Status().Update(ctx, mysqlbackup)
 		if err != nil {
-			log.Error(err, "Failed to update mysqlbackup BackupStatus")
+			log.Error(err, "Failed to update BackupStatus")
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{Requeue: true}, nil
 
 	case "creatingBackup":
 		log.Info("Start creatingBackup phase")
@@ -107,9 +155,8 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				log.Error(err, "Failed to create new Job")
 				return ctrl.Result{}, err
 			}
-			// Job created successfully - return and requeue
-			log.Info("Job Created Successfully, return and requeue")
-			return ctrl.Result{Requeue: false}, nil
+			// Job created successfully
+			log.Info("Job Created Successfully")
 		} else if err != nil {
 			log.Error(err, "Failed to get Job")
 			return ctrl.Result{}, err
@@ -117,51 +164,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			log.Info("Job already present")
 		}
 
-		// Update mysqlbackup crd status with job results
-		if len(jobList.Items) > 0 {
-			// retrieve job status for all jobs
-			jobStatus := getjobStatus(jobList.Items)
-			for obj, objStatus := range jobStatus {
-				//log.Info("whyyyy", obj, objStatus)
-				if objStatus.Succeeded == 1 {
-					mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
-					mysqlbackup.Spec.SuccessfulBackupCount = mysqlbackup.Spec.SuccessfulBackupCount + 1
-					log.Info("Backup Job succeded")
-				} else if objStatus.Failed == 1 {
-					mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
-					log.Info("Backup Job failed")
-				} else if objStatus.Active == 1 {
-					log.Info("Backup Job still running")
-				}
-				err := r.Update(ctx, mysqlbackup)
-				if err != nil {
-					log.Error(err, "Failed to update mysqlbackupCR")
-					return ctrl.Result{}, err
-				}
-			}
-		}
-
-		// Set failedBackup status if failed job found
-		if contains(mysqlbackup.Spec.FailedJobs, mysqlbackup.Name) {
-			mysqlbackup.Status.BackupStatus = "failedBackup"
-			err := r.Status().Update(ctx, mysqlbackup)
-			if err != nil {
-				log.Error(err, "Failed to update mysqlbackup BackupStatus")
-				return ctrl.Result{}, err
-			}
-		}
-
-		// Set readyBackup status if successful job found
-		if contains(mysqlbackup.Spec.SuccessfulJobs, mysqlbackup.Name) {
-			mysqlbackup.Status.BackupStatus = "readyBackup"
-			err := r.Status().Update(ctx, mysqlbackup)
-			if err != nil {
-				log.Error(err, "Failed to update mysqlbackup BackupStatus")
-				return ctrl.Result{}, err
-			}
-		}
-
-		return ctrl.Result{Requeue: false}, nil
+		return ctrl.Result{Requeue: true}, nil
 
 	case "failedBackup":
 		log.Info("Start failedBackup phase")
