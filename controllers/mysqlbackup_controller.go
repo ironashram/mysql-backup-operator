@@ -91,7 +91,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			log.Error(err, "Failed to update mysqlbackup BackupStatus")
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: false}, nil
 
 	case "creatingBackup":
 		log.Info("Start creatingBackup phase")
@@ -109,7 +109,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			}
 			// Job created successfully - return and requeue
 			log.Info("Job Created Successfully, return and requeue")
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{Requeue: false}, nil
 		} else if err != nil {
 			log.Error(err, "Failed to get Job")
 			return ctrl.Result{}, err
@@ -141,7 +141,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			}
 		}
 
-		// Set readyBackup status and requeue if successful job found
+		// Set failedBackup status if failed job found
 		if contains(mysqlbackup.Spec.FailedJobs, mysqlbackup.Name) {
 			mysqlbackup.Status.BackupStatus = "failedBackup"
 			err := r.Status().Update(ctx, mysqlbackup)
@@ -149,10 +149,9 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				log.Error(err, "Failed to update mysqlbackup BackupStatus")
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{Requeue: true}, nil
 		}
 
-		// Set readyBackup status and requeue if successful job found
+		// Set readyBackup status if successful job found
 		if contains(mysqlbackup.Spec.SuccessfulJobs, mysqlbackup.Name) {
 			mysqlbackup.Status.BackupStatus = "readyBackup"
 			err := r.Status().Update(ctx, mysqlbackup)
@@ -160,8 +159,9 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				log.Error(err, "Failed to update mysqlbackup BackupStatus")
 				return ctrl.Result{}, err
 			}
-			return ctrl.Result{Requeue: true}, nil
 		}
+
+		return ctrl.Result{Requeue: false}, nil
 
 	case "failedBackup":
 		log.Info("Start failedBackup phase")
