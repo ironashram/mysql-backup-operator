@@ -44,7 +44,6 @@ type MysqlBackupReconciler struct {
 // Reconcile MysqlBackup CRD
 func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := log.WithValues("mysqlbackup", req.NamespacedName)
 
 	// fetch mysqlbackup
 	mysqlbackup := &m1kcloudv1alpha1.MysqlBackup{}
@@ -65,6 +64,9 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	if status == "" {
 		status = "newBackup"
 	}
+
+	// Add status to all logging
+	log := log.WithValues("mysqlbackupCR", req.NamespacedName, "mysqlbackupStatus", status)
 
 	// List the jobs for this mysqlbackup crd
 	jobList := &batchv1.JobList{}
@@ -112,8 +114,6 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		log.Info("Start newBackup phase")
 		// Set creatingBackup status and requeue if
 		mysqlbackup.Status.BackupStatus = "creatingBackup"
-		//mysqlbackup.Status.SuccessfulJobs = nil
-		//mysqlbackup.Status.FailedJobs = nil
 		err := r.Status().Update(ctx, mysqlbackup)
 		if err != nil {
 			log.Error(err, "Failed to update mysqlbackup BackupStatus")
