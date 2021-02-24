@@ -53,6 +53,10 @@ spec:
               items:
                 type: string
               type: array
+            failedJobs:
+              items:
+                type: string
+              type: array
             host:
               type: string
             initState:
@@ -81,6 +85,12 @@ spec:
               - region
               - storageProvider
               type: object
+            successfulBackupCount:
+              type: integer
+            successfulJobs:
+              items:
+                type: string
+              type: array
             username:
               type: string
           required:
@@ -92,23 +102,16 @@ spec:
           - port
           - secretRef
           - storageRef
+          - successfulBackupCount
           - username
           type: object
         status:
           description: MysqlBackupStatus defines the observed state of MysqlBackup
           properties:
-            backupJobStatus:
-              type: string
             backupStatus:
               type: string
-            successfulBackupLocations:
-              items:
-                type: string
-              type: array
           required:
-          - backupJobStatus
           - backupStatus
-          - successfulBackupLocations
           type: object
       type: object
   version: v1alpha1

@@ -44,72 +44,26 @@ type MysqlBackupReconciler struct {
 // Reconcile MysqlBackup CRD
 func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	//log := ctrl.Log.WithValues("mysqlbackup", req.NamespacedName)
+	log := log.WithValues("mysqlbackup", req.NamespacedName)
 
 	// fetch mysqlbackup
 	mysqlbackup := &m1kcloudv1alpha1.MysqlBackup{}
 	err := r.Get(ctx, req.NamespacedName, mysqlbackup)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			log.Info("MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name",
-				mysqlbackup.Name, "msg", "MysqlBackup resource not found. Ignoring since object must be deleted")
+			log.Info("MysqlBackup resource not found. Ignoring since object must be deleted")
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace, "MysqlBackup.Name",
-			mysqlbackup.Name, "msg", "Failed to get MysqlBackup")
+		log.Error(err, "Failed to get MysqlBackup")
 		return ctrl.Result{}, err
 	}
 
-	// Check mysqlbackup status and act accordingly
-	status := mysqlbackup.Spec.InitState
-	switch status {
-
-	case "newBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "Check Backup Job existence")
-		// Check if the Job already exists, if not create a new one
-		found := &batchv1.Job{}
-		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
-		if err != nil && errors.IsNotFound(err) {
-			// Define a new Job
-			job := r.mysqlBackupJob(mysqlbackup)
-			log.Info("MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Creating a new Job")
-			err = r.Create(ctx, job)
-			if err != nil {
-				log.Error(err, "MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Failed to create new Job")
-				return ctrl.Result{}, err
-			}
-			// Job created successfully - return and requeue
-			log.Info("MysqlBackup Controller", "Job.Namespace", job.Namespace, "Job.Name", job.Name, "msg", "Return and Requeue")
-			return ctrl.Result{Requeue: true}, nil
-		} else if err != nil {
-			log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace,
-				"MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job")
-			return ctrl.Result{}, err
-		} else {
-			log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-				"MysqlBackup.Name", mysqlbackup.Name, "msg", "Job already present, nothing to do")
-		}
-
-	case "creatingBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
-
-	case "failedBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
-
-	case "readyBackup":
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
-
-	default:
-		log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "")
+	// Get Status
+	status := mysqlbackup.Status.BackupStatus
+	if status == "" {
+		status = "newBackup"
 	}
 
 	// List the jobs for this mysqlbackup crd
@@ -119,15 +73,87 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		client.MatchingLabels(joblabels(mysqlbackup.Name)),
 	}
 	if err = r.List(ctx, jobList, listOpts...); err != nil {
-		log.Error(err, "MysqlBackup Controller", "MysqlBackup.Namespace", mysqlbackup.Namespace,
-			"MysqlBackup.Name", mysqlbackup.Name, "msg", "Failed to get Job list")
+		log.Error(err, "Failed to get Job list")
 		return ctrl.Result{}, err
 	}
 
-	// Update mysqlbackup crd status if needed
-	jobStatus := getjobStatus(jobList.Items)
-	log.Info("MysqlBackup Controller", "MysqlBackup.initStatus", status, "MysqlBackup.Namespace", mysqlbackup.Namespace,
-		"MysqlBackup.Name", mysqlbackup.Name, "msg", jobStatus)
+	/*
+		// Update mysqlbackup crd status with job results
+		if len(jobList.Items) > 0 {
+			// retrieve job status for all jobs
+			log.Info("whyyyyyyy")
+			jobStatus := getjobStatus(jobList.Items)
+			for obj, objStatus := range jobStatus {
+				if objStatus.Succeeded == 1 {
+					mysqlbackup.Status.SuccessfulJobs = append(mysqlbackup.Status.SuccessfulJobs, obj)
+					mysqlbackup.Status.SuccessfulBackupCount = mysqlbackup.Status.SuccessfulBackupCount + 1
+					mysqlbackup.Status.BackupStatus = "readyBackup"
+					log.Info("Backup Job succeded")
+				} else if objStatus.Failed == 1 {
+					mysqlbackup.Status.FailedJobs = append(mysqlbackup.Status.FailedJobs, obj)
+					mysqlbackup.Status.BackupStatus = "failedBackup"
+					log.Info("Backup Job failed")
+				} else if objStatus.Active == 1 {
+					log.Info("Backup Job still running")
+				}
+				err := r.Status().Update(ctx, mysqlbackup)
+				if err != nil {
+					log.Error(err, "Failed to update mysqlbackup BackupStatus")
+					return ctrl.Result{}, err
+				}
+			}
+		}
+	*/
+
+	// Check mysqlbackup status and act accordingly
+	switch status {
+
+	case "newBackup":
+		log.Info("Start newBackup phase")
+		// Set creatingBackup status and requeue if
+		mysqlbackup.Status.BackupStatus = "creatingBackup"
+		//mysqlbackup.Status.SuccessfulJobs = nil
+		//mysqlbackup.Status.FailedJobs = nil
+		err := r.Status().Update(ctx, mysqlbackup)
+		if err != nil {
+			log.Error(err, "Failed to update mysqlbackup BackupStatus")
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{Requeue: true}, nil
+
+	case "creatingBackup":
+		log.Info("Start creatingBackup phase")
+		// Check if the Job already exists, if not create a new one
+		found := &batchv1.Job{}
+		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
+		if err != nil && errors.IsNotFound(err) {
+			// Define a new Job
+			job := r.mysqlBackupJob(mysqlbackup)
+			log.Info("Creating a new Job")
+			err = r.Create(ctx, job)
+			if err != nil {
+				log.Error(err, "Failed to create new Job")
+				return ctrl.Result{}, err
+			}
+			// Job created successfully - return and requeue
+			log.Info("Job Created Successfully, return and requeue")
+			return ctrl.Result{Requeue: true}, nil
+		} else if err != nil {
+			log.Error(err, "Failed to get Job")
+			return ctrl.Result{}, err
+		} else {
+			log.Info("Job already present, nothing to do")
+		}
+
+	case "failedBackup":
+		log.Info("Start failedBackup phase")
+
+	case "readyBackup":
+		log.Info("Start readyBackup phase")
+
+	default:
+		log.Info("Start unknown backup state phase")
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -177,11 +203,11 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 }
 
 // getJobStatus returns job names, status of the array of jobs passed in
-func getjobStatus(jobs []batchv1.Job) map[string]string {
-	var jobStatusMap map[string]string
-	jobStatusMap = make(map[string]string)
+func getjobStatus(jobs []batchv1.Job) map[string]batchv1.JobStatus {
+	var jobStatusMap map[string]batchv1.JobStatus
+	jobStatusMap = make(map[string]batchv1.JobStatus)
 	for _, job := range jobs {
-		jobStatusMap[job.Name] = job.Status.String()
+		jobStatusMap[job.Name] = job.Status
 	}
 	return jobStatusMap
 }
