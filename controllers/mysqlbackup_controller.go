@@ -79,34 +79,6 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	/*
-		// Update mysqlbackup crd status with job results
-		if len(jobList.Items) > 0 {
-			// retrieve job status for all jobs
-			log.Info("whyyyyyyy")
-			jobStatus := getjobStatus(jobList.Items)
-			for obj, objStatus := range jobStatus {
-				if objStatus.Succeeded == 1 {
-					mysqlbackup.Status.SuccessfulJobs = append(mysqlbackup.Status.SuccessfulJobs, obj)
-					mysqlbackup.Status.SuccessfulBackupCount = mysqlbackup.Status.SuccessfulBackupCount + 1
-					mysqlbackup.Status.BackupStatus = "readyBackup"
-					log.Info("Backup Job succeded")
-				} else if objStatus.Failed == 1 {
-					mysqlbackup.Status.FailedJobs = append(mysqlbackup.Status.FailedJobs, obj)
-					mysqlbackup.Status.BackupStatus = "failedBackup"
-					log.Info("Backup Job failed")
-				} else if objStatus.Active == 1 {
-					log.Info("Backup Job still running")
-				}
-				err := r.Status().Update(ctx, mysqlbackup)
-				if err != nil {
-					log.Error(err, "Failed to update mysqlbackup BackupStatus")
-					return ctrl.Result{}, err
-				}
-			}
-		}
-	*/
-
 	// Check mysqlbackup status and act accordingly
 	switch status {
 
@@ -142,7 +114,53 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			log.Error(err, "Failed to get Job")
 			return ctrl.Result{}, err
 		} else {
-			log.Info("Job already present, nothing to do")
+			log.Info("Job already present")
+		}
+
+		// Update mysqlbackup crd status with job results
+		if len(jobList.Items) > 0 {
+			// retrieve job status for all jobs
+			jobStatus := getjobStatus(jobList.Items)
+			for obj, objStatus := range jobStatus {
+				//log.Info("whyyyy", obj, objStatus)
+				if objStatus.Succeeded == 1 {
+					mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
+					mysqlbackup.Spec.SuccessfulBackupCount = mysqlbackup.Spec.SuccessfulBackupCount + 1
+					log.Info("Backup Job succeded")
+				} else if objStatus.Failed == 1 {
+					mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
+					log.Info("Backup Job failed")
+				} else if objStatus.Active == 1 {
+					log.Info("Backup Job still running")
+				}
+				err := r.Update(ctx, mysqlbackup)
+				if err != nil {
+					log.Error(err, "Failed to update mysqlbackupCR")
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
+		// Set readyBackup status and requeue if successful job found
+		if contains(mysqlbackup.Spec.FailedJobs, mysqlbackup.Name) {
+			mysqlbackup.Status.BackupStatus = "failedBackup"
+			err := r.Status().Update(ctx, mysqlbackup)
+			if err != nil {
+				log.Error(err, "Failed to update mysqlbackup BackupStatus")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil
+		}
+
+		// Set readyBackup status and requeue if successful job found
+		if contains(mysqlbackup.Spec.SuccessfulJobs, mysqlbackup.Name) {
+			mysqlbackup.Status.BackupStatus = "readyBackup"
+			err := r.Status().Update(ctx, mysqlbackup)
+			if err != nil {
+				log.Error(err, "Failed to update mysqlbackup BackupStatus")
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{Requeue: true}, nil
 		}
 
 	case "failedBackup":
@@ -210,6 +228,16 @@ func getjobStatus(jobs []batchv1.Job) map[string]batchv1.JobStatus {
 		jobStatusMap[job.Name] = job.Status
 	}
 	return jobStatusMap
+}
+
+// contains is a simple function to check for a string in a slice
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }
 
 // return the label to filter backupjobs
