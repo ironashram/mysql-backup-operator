@@ -76,7 +76,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	// Update mysqlbackup crd status with job results
+	// Update mysqlbackup cr status with job results
 	if len(jobList.Items) > 0 {
 		// retrieve job status for all jobs
 		jobStatus := getjobStatus(jobList.Items)
@@ -123,7 +123,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		}
 	}
 
-	// Check mysqlbackup status and act accordingly
+	// Read mysqlbackup status and act accordingly
 	status = mysqlbackup.Status.BackupStatus
 
 	switch status {
@@ -145,7 +145,6 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		found := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
 		if err != nil && errors.IsNotFound(err) {
-			// Define a new Job
 			job := r.mysqlJob(mysqlbackup)
 			log.Info("Creating a new Job")
 			err = r.Create(ctx, job)
@@ -153,7 +152,6 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				log.Error(err, "Failed to create new Job")
 				return ctrl.Result{}, err
 			}
-			// Job created successfully
 			log.Info("Job Created Successfully")
 		} else if err != nil {
 			log.Error(err, "Failed to get Job")
@@ -216,7 +214,6 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 			},
 		},
 	}
-	// Set mysqlJob instance as the owner and controller
 	ctrl.SetControllerReference(m, job, r.Scheme)
 	return job
 }
