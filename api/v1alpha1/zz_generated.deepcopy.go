@@ -103,11 +103,6 @@ func (in *MysqlBackupSpec) DeepCopyInto(out *MysqlBackupSpec) {
 	*out = *in
 	out.ClusterRef = in.ClusterRef
 	out.StorageRef = in.StorageRef
-	if in.DatabasesToBackup != nil {
-		in, out := &in.DatabasesToBackup, &out.DatabasesToBackup
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	out.SecretRef = in.SecretRef
 	if in.FailedJobs != nil {
 		in, out := &in.FailedJobs, &out.FailedJobs

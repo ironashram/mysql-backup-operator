@@ -5,21 +5,18 @@ metadata:
   #name: mysqlbackup
   namespace: database
 spec:
-  initState: newBackup
   clusterRef:
     clusterStatus: Ready
     clusterName: mysql-cluster-m1k
   secretRef:
     secret: mysql-cluster-m1k
-  databasesToBackup:
-    - puppaaaa
-    - test
+  database: puppaaaa
   storageRef:
     storageProvider: s3
     region: us-west-1
     bucket: michele-test-backup-operator
+  maxJobs: 3
   backupType: mysqldump
   host: 10.106.171.2
   port: "3306"
   username: root
-  successfulBackupCount: 0

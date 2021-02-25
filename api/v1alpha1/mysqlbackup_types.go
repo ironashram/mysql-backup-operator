@@ -25,18 +25,18 @@ import (
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
-	Host                  string         `json:"host"`
-	Port                  string         `json:"port"`
-	Username              string         `json:"username"`
-	BackupType            string         `json:"backupType"`
-	ClusterRef            ClusterRefSpec `json:"clusterRef"`
-	StorageRef            StorageRefSpec `json:"storageRef"`
-	DatabasesToBackup     []string       `json:"databasesToBackup"`
-	SecretRef             SecretRefSpec  `json:"secretRef"`
-	InitState             string         `json:"initState"`
-	FailedJobs            []string       `json:"failedJobs,omitempty"`
-	SuccessfulJobs        []string       `json:"successfulJobs,omitempty"`
-	SuccessfulBackupCount int            `json:"successfulBackupCount"`
+	Host           string         `json:"host"`
+	Port           string         `json:"port"`
+	Username       string         `json:"username"`
+	BackupType     string         `json:"backupType"`
+	ClusterRef     ClusterRefSpec `json:"clusterRef"`
+	StorageRef     StorageRefSpec `json:"storageRef"`
+	Database       string         `json:"database"`
+	SecretRef      SecretRefSpec  `json:"secretRef"`
+	MaxJobs        int            `json:"maxJobs"`
+	FailedJobs     []string       `json:"failedJobs,omitempty"`
+	SuccessfulJobs []string       `json:"successfulJobs,omitempty"`
+	JobCount       int            `json:"JobCount,omitempty"`
 }
 
 // ClusterRefSpec defines the ClusterRef

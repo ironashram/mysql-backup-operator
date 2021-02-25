@@ -49,17 +49,13 @@ spec:
               - clusterName
               - clusterStatus
               type: object
-            databasesToBackup:
-              items:
-                type: string
-              type: array
+            database:
+              type: string
             failedJobs:
               items:
                 type: string
               type: array
             host:
-              type: string
-            initState:
               type: string
             port:
               type: string
@@ -96,13 +92,11 @@ spec:
           required:
           - backupType
           - clusterRef
-          - databasesToBackup
+          - database
           - host
-          - initState
           - port
           - secretRef
           - storageRef
-          - successfulBackupCount
           - username
           type: object
         status:
