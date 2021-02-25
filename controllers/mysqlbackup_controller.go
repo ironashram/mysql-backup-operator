@@ -63,7 +63,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Get Status
 	status := mysqlbackup.Status.BackupStatus
 
-	// Add status to all logging
+	// Add status to all logs
 	log := log.WithValues("mysqlBackup", req.NamespacedName, "status", status)
 
 	switch status {
@@ -72,16 +72,16 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		log.Info("Start initial phase")
 
 		// Check if job treshold per database is reached
-		globalLjobList := &batchv1.JobList{}
+		globalJobList := &batchv1.JobList{}
 		globalListOpts := []client.ListOption{
 			client.InNamespace(mysqlbackup.Namespace),
 			client.MatchingLabels{"cluster": mysqlbackup.Spec.ClusterRef.ClusterName, "database": mysqlbackup.Spec.Database},
 		}
-		if err = r.List(ctx, globalLjobList, globalListOpts...); err != nil {
+		if err = r.List(ctx, globalJobList, globalListOpts...); err != nil {
 			log.Error(err, "Failed to get Job list")
 			return ctrl.Result{}, err
 		}
-		if len(globalLjobList.Items) >= mysqlbackup.Spec.MaxJobs {
+		if len(globalJobList.Items) >= mysqlbackup.Spec.MaxJobs {
 			log.Info("Max number of jobs per database reached")
 			updateStatus(r, mysqlbackup, "NotReady")
 			return ctrl.Result{Requeue: true}, nil
@@ -129,7 +129,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	case "checkJob":
 		log.Info("Start checkJob phase")
 
-		// List the jobs for this mysqlbackup crd
+		// List the jobs for this mysqlbackup cr
 		jobList := &batchv1.JobList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(mysqlbackup.Namespace),
@@ -239,7 +239,7 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 	return job
 }
 
-// func update status
+// updateStatus sets the given status for the cr
 func updateStatus(r *MysqlBackupReconciler, m *m1kcloudv1alpha1.MysqlBackup, status string) bool {
 	ctx := context.Background()
 	m.Status.BackupStatus = status
