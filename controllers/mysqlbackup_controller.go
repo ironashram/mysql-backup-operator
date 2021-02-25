@@ -215,8 +215,9 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 						Name:    "mysqldump",
 						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
 						Command: []string{"/bin/sh", "-c"},
-						Args: []string{"mysqldump -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
-							m.Spec.Database + "| pigz -9 -p 4 > " + m.Spec.Database + ".sql.gz 2> /tmp/error.log"},
+						Args: []string{"set -o pipefail; mysqldump -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
+							m.Spec.Database + "| pigz -9 -p 4 > " + m.Spec.Database + ".sql.gz"},
+						//Command: []string{"sleep", "60000"},
 						Env: []corev1.EnvVar{{
 							Name: "MYSQL_PASSWORD",
 							ValueFrom: &corev1.EnvVarSource{

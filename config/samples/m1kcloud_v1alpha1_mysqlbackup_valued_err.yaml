@@ -9,7 +9,7 @@ spec:
     clusterName: mysql-cluster-m1k
   secretRef:
     secret: mysql-cluster-m1k
-  database: puppaaaa
+  database: test_do_not_exist
   storageRef:
     storageProvider: s3
     region: us-west-1
