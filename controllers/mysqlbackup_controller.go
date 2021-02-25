@@ -39,6 +39,8 @@ type MysqlBackupReconciler struct {
 
 // +kubebuilder:rbac:groups=m1kcloud.m1k.cloud,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=m1kcloud.m1k.cloud,resources=mysqlbackups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile MysqlBackup CRD
 func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -278,5 +280,6 @@ func joblabels(name string, cluster string, database string) map[string]string {
 func (r *MysqlBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&m1kcloudv1alpha1.MysqlBackup{}).
+		Owns(&batchv1.Job{}).
 		Complete(r)
 }
