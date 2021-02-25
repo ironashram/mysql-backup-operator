@@ -97,6 +97,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 						log.Error(err, "Failed to update cr status")
 						return ctrl.Result{}, err
 					}
+					return ctrl.Result{Requeue: true}, nil
 				}
 			} else if objStatus.Failed == 1 {
 				if !contains(mysqlbackup.Spec.FailedJobs, obj) {
@@ -113,6 +114,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 						log.Error(err, "Failed to update cr status")
 						return ctrl.Result{}, err
 					}
+					return ctrl.Result{Requeue: true}, nil
 				}
 			} else if objStatus.Active == 1 {
 				log.Info("Job still running")
