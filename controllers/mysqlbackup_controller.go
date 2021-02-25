@@ -65,74 +65,28 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Add status to all logging
 	log := log.WithValues("mysqlBackup", req.NamespacedName, "status", status)
 
-	// List the jobs for this mysqlbackup crd
-	jobList := &batchv1.JobList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(mysqlbackup.Namespace),
-		client.MatchingLabels(joblabels(mysqlbackup.Spec.ClusterRef.ClusterName, mysqlbackup.Spec.Database)),
-	}
-	if err = r.List(ctx, jobList, listOpts...); err != nil {
-		log.Error(err, "Failed to get Job list")
-		return ctrl.Result{}, err
-	}
-
-	// Update mysqlbackup cr status with job results
-	if len(jobList.Items) > 0 {
-		// retrieve job status for all jobs
-		jobStatus := getjobStatus(jobList.Items)
-		for obj, objStatus := range jobStatus {
-			if objStatus.Succeeded == 1 {
-				if !contains(mysqlbackup.Spec.SuccessfulJobs, obj) {
-					mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
-					mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
-					log.Info("Job successful, adding to cr")
-					err := r.Update(ctx, mysqlbackup)
-					if err != nil {
-						log.Error(err, "Failed to update cr")
-						return ctrl.Result{}, err
-					}
-					mysqlbackup.Status.BackupStatus = "Ready"
-					err = r.Status().Update(ctx, mysqlbackup)
-					if err != nil {
-						log.Error(err, "Failed to update cr status")
-						return ctrl.Result{}, err
-					}
-					return ctrl.Result{Requeue: true}, nil
-				}
-			} else if objStatus.Failed == 1 {
-				if !contains(mysqlbackup.Spec.FailedJobs, obj) {
-					mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
-					mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
-					log.Info("Job failed, adding to cr")
-					err := r.Update(ctx, mysqlbackup)
-					if err != nil {
-						log.Error(err, "Failed to update cr")
-						return ctrl.Result{}, err
-					}
-					mysqlbackup.Status.BackupStatus = "NotReady"
-					err = r.Status().Update(ctx, mysqlbackup)
-					if err != nil {
-						log.Error(err, "Failed to update cr status")
-						return ctrl.Result{}, err
-					}
-					return ctrl.Result{Requeue: true}, nil
-				}
-			} else if objStatus.Active == 1 {
-				log.Info("Job still running")
-				return ctrl.Result{Requeue: true}, nil
-			}
-		}
-	}
-
-	// Read mysqlbackup status and act accordingly
-	status = mysqlbackup.Status.BackupStatus
-
 	switch status {
 
 	case "":
 		log.Info("Start initial phase")
+
+		// Check if job treshold per database is reached
+		globalLjobList := &batchv1.JobList{}
+		globalListOpts := []client.ListOption{
+			client.InNamespace(mysqlbackup.Namespace),
+			client.MatchingLabels{"cluster": mysqlbackup.Spec.ClusterRef.ClusterName, "database": mysqlbackup.Spec.Database},
+		}
+		if err = r.List(ctx, globalLjobList, globalListOpts...); err != nil {
+			log.Error(err, "Failed to get Job list")
+			return ctrl.Result{}, err
+		}
+		if len(globalLjobList.Items) >= mysqlbackup.Spec.MaxJobs {
+			log.Info("Max number of jobs per database reached")
+			updateStatus(r, mysqlbackup, "NotReady")
+			return ctrl.Result{Requeue: true}, nil
+		}
 		// Set creatingBackup status and requeue
-		mysqlbackup.Status.BackupStatus = "creatingJob"
+		mysqlbackup.Status.BackupStatus = "createJob"
 		err := r.Status().Update(ctx, mysqlbackup)
 		if err != nil {
 			log.Error(err, "Failed to update cr status")
@@ -140,20 +94,8 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		}
 		return ctrl.Result{Requeue: true}, nil
 
-	case "creatingJob":
-		log.Info("Start creatingJob phase")
-
-		// Check if job treshold is reached
-		if mysqlbackup.Spec.JobCount >= mysqlbackup.Spec.MaxJobs {
-			log.Info("Max number of jobs per database reached")
-			mysqlbackup.Status.BackupStatus = "NotReady"
-			err = r.Status().Update(ctx, mysqlbackup)
-			if err != nil {
-				log.Error(err, "Failed to update cr status")
-				return ctrl.Result{}, err
-			}
-			return ctrl.Result{Requeue: true}, nil
-		}
+	case "createJob":
+		log.Info("Start createJob phase")
 
 		// Check if the Job already exists, if not create a new one
 		found := &batchv1.Job{}
@@ -167,14 +109,73 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				return ctrl.Result{}, err
 			}
 			log.Info("Job Created Successfully")
+			updateStatus(r, mysqlbackup, "checkJob")
 		} else if err != nil {
 			log.Error(err, "Failed to get Job")
 			return ctrl.Result{}, err
 		} else {
 			log.Info("Job already present")
+			updateStatus(r, mysqlbackup, "checkJob")
 		}
 
 		return ctrl.Result{Requeue: true}, nil
+
+	case "checkJob":
+		log.Info("Start checkJob phase")
+
+		// List the jobs for this mysqlbackup crd
+		jobList := &batchv1.JobList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(mysqlbackup.Namespace),
+			client.MatchingLabels(joblabels(mysqlbackup.Name, mysqlbackup.Spec.ClusterRef.ClusterName, mysqlbackup.Spec.Database)),
+		}
+		if err = r.List(ctx, jobList, listOpts...); err != nil {
+			log.Error(err, "Failed to get Job list")
+			return ctrl.Result{}, err
+		}
+
+		// Update mysqlbackup cr status with job results
+		if len(jobList.Items) == 1 {
+			// retrieve job status for all jobs
+			jobStatus := getjobStatus(jobList.Items)
+			for obj, objStatus := range jobStatus {
+				if objStatus.Succeeded == 1 {
+					if !contains(mysqlbackup.Spec.SuccessfulJobs, obj) {
+						mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
+						mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
+						log.Info("Job successful, adding to cr")
+						err := r.Update(ctx, mysqlbackup)
+						if err != nil {
+							log.Error(err, "Failed to update cr")
+							return ctrl.Result{}, err
+						}
+						updateStatus(r, mysqlbackup, "Ready")
+						return ctrl.Result{Requeue: true}, nil
+					}
+				} else if objStatus.Failed == 1 {
+					if !contains(mysqlbackup.Spec.FailedJobs, obj) {
+						mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
+						mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
+						log.Info("Job failed, adding to cr")
+						err := r.Update(ctx, mysqlbackup)
+						if err != nil {
+							log.Error(err, "Failed to update cr")
+							return ctrl.Result{}, err
+						}
+						updateStatus(r, mysqlbackup, "NotReady")
+						return ctrl.Result{Requeue: true}, nil
+					}
+				} else if objStatus.Active == 1 {
+					log.Info("Job still running")
+					return ctrl.Result{Requeue: true}, nil
+				}
+			}
+		} else if len(jobList.Items) > 1 {
+			log.Info("Too many jobs, probable race condition")
+			updateStatus(r, mysqlbackup, "NotReady")
+
+			return ctrl.Result{Requeue: true}, nil
+		}
 
 	case "NotReady":
 		log.Info("Start NotReady phase")
@@ -191,16 +192,17 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 // mysqlJob returns a mysql job object
 func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
-	ls := joblabels(m.Spec.ClusterRef.ClusterName, m.Spec.Database)
+	ls := joblabels(m.Name, m.Spec.ClusterRef.ClusterName, m.Spec.Database)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      m.Name,
-			Namespace: m.Namespace,
+			GenerateName: m.Name,
+			Namespace:    m.Namespace,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
+					Labels:       ls,
+					GenerateName: "mysqljob-",
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
@@ -232,6 +234,18 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 	return job
 }
 
+// func update status
+func updateStatus(r *MysqlBackupReconciler, m *m1kcloudv1alpha1.MysqlBackup, status string) bool {
+	ctx := context.Background()
+	m.Status.BackupStatus = status
+	err := r.Status().Update(ctx, m)
+	if err != nil {
+		log.Error(err, "Failed to update cr status")
+		return false
+	}
+	return true
+}
+
 // getJobStatus returns job names, status of the array of jobs passed in
 func getjobStatus(jobs []batchv1.Job) map[string]batchv1.JobStatus {
 	var jobStatusMap map[string]batchv1.JobStatus
@@ -253,8 +267,8 @@ func contains(list []string, s string) bool {
 }
 
 // return the label to filter backupjobs
-func joblabels(cluster string, database string) map[string]string {
-	return map[string]string{"cluster": cluster, "database": database}
+func joblabels(name string, cluster string, database string) map[string]string {
+	return map[string]string{"MysqlBackup": name, "cluster": cluster, "database": database}
 }
 
 // SetupWithManager sets up the controller with the Manager.

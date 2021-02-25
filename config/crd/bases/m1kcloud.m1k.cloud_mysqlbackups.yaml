@@ -36,6 +36,8 @@ spec:
         spec:
           description: MysqlBackupSpec defines the desired state of MysqlBackup
           properties:
+            JobCount:
+              type: integer
             backupType:
               type: string
             clusterRef:
@@ -57,6 +59,8 @@ spec:
               type: array
             host:
               type: string
+            maxJobs:
+              type: integer
             port:
               type: string
             secretRef:
@@ -81,8 +85,6 @@ spec:
               - region
               - storageProvider
               type: object
-            successfulBackupCount:
-              type: integer
             successfulJobs:
               items:
                 type: string
@@ -94,6 +96,7 @@ spec:
           - clusterRef
           - database
           - host
+          - maxJobs
           - port
           - secretRef
           - storageRef
