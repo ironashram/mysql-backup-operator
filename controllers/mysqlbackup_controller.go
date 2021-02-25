@@ -63,7 +63,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	status := mysqlbackup.Status.BackupStatus
 
 	// Add status to all logging
-	log := log.WithValues("mysqlbackupCR", req.NamespacedName, "mysqlbackupStatus", status)
+	log := log.WithValues("mysqlBackup", req.NamespacedName, "status", status)
 
 	// List the jobs for this mysqlbackup crd
 	jobList := &batchv1.JobList{}
@@ -85,70 +85,66 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				if !contains(mysqlbackup.Spec.SuccessfulJobs, obj) {
 					mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
 					mysqlbackup.Spec.SuccessfulBackupCount = mysqlbackup.Spec.SuccessfulBackupCount + 1
-					log.Info("Backup Job successful, adding to cr")
+					log.Info("Job successful, adding to cr")
 					err := r.Update(ctx, mysqlbackup)
 					if err != nil {
-						log.Error(err, "Failed to update mysqlbackup")
+						log.Error(err, "Failed to update cr")
 						return ctrl.Result{}, err
 					}
-					mysqlbackup.Status.BackupStatus = "readyBackup"
+					mysqlbackup.Status.BackupStatus = "Ready"
 					err = r.Status().Update(ctx, mysqlbackup)
 					if err != nil {
-						log.Error(err, "Failed to update mysqlbackup BackupStatus")
+						log.Error(err, "Failed to update cr status")
 						return ctrl.Result{}, err
 					}
 				}
 			} else if objStatus.Failed == 1 {
 				if !contains(mysqlbackup.Spec.FailedJobs, obj) {
 					mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
-					log.Info("Backup Job failed, adding to cr")
+					log.Info("Job failed, adding to cr")
 					err := r.Update(ctx, mysqlbackup)
 					if err != nil {
-						log.Error(err, "Failed to update mysqlbackup")
+						log.Error(err, "Failed to update cr")
 						return ctrl.Result{}, err
 					}
-					mysqlbackup.Status.BackupStatus = "failedBackup"
+					mysqlbackup.Status.BackupStatus = "NotReady"
 					err = r.Status().Update(ctx, mysqlbackup)
 					if err != nil {
-						log.Error(err, "Failed to update mysqlbackup BackupStatus")
+						log.Error(err, "Failed to update cr status")
 						return ctrl.Result{}, err
 					}
 				}
 			} else if objStatus.Active == 1 {
-				log.Info("Backup Job still running")
+				log.Info("Job still running")
 				return ctrl.Result{Requeue: true}, nil
 			}
 		}
 	}
 
 	// Check mysqlbackup status and act accordingly
-	if status == "" {
-		status = "newBackup"
-	} else {
-		status = mysqlbackup.Status.BackupStatus
-	}
+	status = mysqlbackup.Status.BackupStatus
 
 	switch status {
 
-	case "newBackup":
-		log.Info("Start newBackup phase")
+	case "":
+		log.Info("Start initial phase")
 		// Set creatingBackup status and requeue if
-		mysqlbackup.Status.BackupStatus = "creatingBackup"
+		mysqlbackup.Status.BackupStatus = "creatingJob"
 		err := r.Status().Update(ctx, mysqlbackup)
 		if err != nil {
-			log.Error(err, "Failed to update BackupStatus")
+			log.Error(err, "Failed to update cr status")
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
 
-	case "creatingBackup":
-		log.Info("Start creatingBackup phase")
+	case "creatingJob":
+		log.Info("Start creatingJob phase")
 		// Check if the Job already exists, if not create a new one
 		found := &batchv1.Job{}
 		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
 		if err != nil && errors.IsNotFound(err) {
 			// Define a new Job
-			job := r.mysqlBackupJob(mysqlbackup)
+			job := r.mysqlJob(mysqlbackup)
 			log.Info("Creating a new Job")
 			err = r.Create(ctx, job)
 			if err != nil {
@@ -166,21 +162,21 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 		return ctrl.Result{Requeue: true}, nil
 
-	case "failedBackup":
-		log.Info("Start failedBackup phase")
+	case "NotReady":
+		log.Info("Start NotReady phase")
 
-	case "readyBackup":
-		log.Info("Start readyBackup phase")
+	case "Ready":
+		log.Info("Start Ready phase")
 
 	default:
-		log.Info("Start unknown backup state phase")
+		log.Info("Start Unknown state phase")
 	}
 
 	return ctrl.Result{}, nil
 }
 
-// mysqlBackupJob returns a mysql backup job object
-func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
+// mysqlJob returns a mysql job object
+func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
 	ls := joblabels(m.Name)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -218,7 +214,7 @@ func (r *MysqlBackupReconciler) mysqlBackupJob(m *m1kcloudv1alpha1.MysqlBackup) 
 			},
 		},
 	}
-	// Set mysqlBackupJob instance as the owner and controller
+	// Set mysqlJob instance as the owner and controller
 	ctrl.SetControllerReference(m, job, r.Scheme)
 	return job
 }
