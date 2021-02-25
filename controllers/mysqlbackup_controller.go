@@ -18,7 +18,6 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -97,10 +96,18 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	case "createJob":
 		log.Info("Start createJob phase")
 
-		// Check if the Job already exists, if not create a new one
-		found := &batchv1.Job{}
-		err = r.Get(ctx, types.NamespacedName{Name: mysqlbackup.Name, Namespace: mysqlbackup.Namespace}, found)
-		if err != nil && errors.IsNotFound(err) {
+		// Check if the Job already exists, if not create it
+		jobs := &batchv1.JobList{}
+		Opts := []client.ListOption{
+			client.InNamespace(mysqlbackup.Namespace),
+			client.MatchingLabels(joblabels(mysqlbackup.Name, mysqlbackup.Spec.ClusterRef.ClusterName, mysqlbackup.Spec.Database)),
+		}
+		if err = r.List(ctx, jobs, Opts...); err != nil {
+			log.Error(err, "Failed to get Job")
+			return ctrl.Result{}, err
+		}
+
+		if len(jobs.Items) == 0 {
 			job := r.mysqlJob(mysqlbackup)
 			log.Info("Creating a new Job")
 			err = r.Create(ctx, job)
@@ -110,12 +117,9 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			}
 			log.Info("Job Created Successfully")
 			updateStatus(r, mysqlbackup, "checkJob")
-		} else if err != nil {
-			log.Error(err, "Failed to get Job")
-			return ctrl.Result{}, err
-		} else {
+		} else if len(jobs.Items) > 0 {
 			log.Info("Job already present")
-			updateStatus(r, mysqlbackup, "checkJob")
+			return ctrl.Result{Requeue: false}, nil
 		}
 
 		return ctrl.Result{Requeue: true}, nil
@@ -195,14 +199,13 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 	ls := joblabels(m.Name, m.Spec.ClusterRef.ClusterName, m.Spec.Database)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: m.Name,
+			GenerateName: "mysqljob-",
 			Namespace:    m.Namespace,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:       ls,
-					GenerateName: "mysqljob-",
+					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy: "Never",
