@@ -199,18 +199,20 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 // mysqlJob returns a mysql job object
 func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batchv1.Job {
 	ls := joblabels(m.Name, m.Spec.ClusterRef.ClusterName, m.Spec.Database)
+	backoffLimit := int32(1)
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "mysqljob-",
 			Namespace:    m.Namespace,
 		},
 		Spec: batchv1.JobSpec{
+			BackoffLimit: &backoffLimit,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					RestartPolicy: "Never",
+					RestartPolicy: "OnFailure",
 					Containers: []corev1.Container{{
 						Name:    "mysqldump",
 						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
