@@ -47,9 +47,8 @@ type ClusterRefSpec struct {
 
 // StorageRefSpec defines the StorageRef
 type StorageRefSpec struct {
-	StorageProvider string `json:"storageProvider"`
-	Region          string `json:"region"`
-	Bucket          string `json:"bucket"`
+	MinioEndpoint string `json:"minioEndpoint"`
+	Bucket        string `json:"bucket"`
 }
 
 // SecretRefSpec defines the SecretRef

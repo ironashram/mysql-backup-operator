@@ -76,14 +76,11 @@ spec:
               properties:
                 bucket:
                   type: string
-                region:
-                  type: string
-                storageProvider:
+                minioEndpoint:
                   type: string
               required:
               - bucket
-              - region
-              - storageProvider
+              - minioEndpoint
               type: object
             successfulJobs:
               items:

@@ -2,20 +2,19 @@ apiVersion: m1kcloud.m1k.cloud/v1alpha1
 kind: MysqlBackup
 metadata:
   generateName: mysqlbackup-
-  namespace: database
+  namespace: default
 spec:
   clusterRef:
     clusterStatus: Ready
     clusterName: mysql-cluster-m1k
   secretRef:
-    secret: mysql-cluster-m1k
-  database: puppaaaa
+    secret: mysql-backup-test-secret
+  database: test_exists
   storageRef:
-    storageProvider: s3
-    region: us-west-1
+    minioEndpoint: http://minio-1614591954.minio.svc.cluster.local:9000
     bucket: michele-test-backup-operator
   maxJobs: 3
   backupType: mysqldump
-  host: 10.106.171.2
+  host: 10.100.163.18
   port: "3306"
   username: root

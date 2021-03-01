@@ -215,10 +215,11 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 					RestartPolicy: "OnFailure",
 					Containers: []corev1.Container{{
 						Name:    "mysqldump",
-						Image:   "quay.io/ironashram/test-alpine:v0.0.2",
+						Image:   "quay.io/ironashram/test-alpine:v0.0.3",
 						Command: []string{"/bin/sh", "-c"},
-						Args: []string{"set -o pipefail; mysqldump -u " + m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " +
-							m.Spec.Database + "| pigz -9 -p 4 > " + m.Spec.Database + ".sql.gz"},
+						Args: []string{"set -o pipefail; ./mc alias set minio " + m.Spec.StorageRef.MinioEndpoint + " $ACCESS_KEY $SECRET_KEY --api s3v4; mysqldump -u " +
+							m.Spec.Username + " -h " + m.Spec.Host + " -P " + m.Spec.Port + " -p$MYSQL_PASSWORD " + m.Spec.Database + "| pigz -9 -p 4 | ./mc pipe minio/" +
+							m.Spec.StorageRef.Bucket + "/" + m.Spec.Database + ".tar.gz;"},
 						//Command: []string{"sleep", "60000"},
 						Env: []corev1.EnvVar{{
 							Name: "MYSQL_PASSWORD",
@@ -227,11 +228,33 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: m.Spec.SecretRef.Secret,
 									},
-									Key: "ROOT_PASSWORD",
+									Key: "MYSQL_ROOT_PASSWORD",
 								},
 							},
-						}},
-						TerminationMessagePath:   "/tmp/error.log",
+						},
+							{
+								Name: "ACCESS_KEY",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: m.Spec.SecretRef.Secret,
+										},
+										Key: "accesskey",
+									},
+								},
+							},
+							{
+								Name: "SECRET_KEY",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: m.Spec.SecretRef.Secret,
+										},
+										Key: "secretkey",
+									},
+								},
+							}},
+						TerminationMessagePath:   "/dev/termination-log",
 						TerminationMessagePolicy: "File",
 					}},
 				},
