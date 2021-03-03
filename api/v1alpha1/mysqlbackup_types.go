@@ -25,18 +25,15 @@ import (
 
 // MysqlBackupSpec defines the desired state of MysqlBackup
 type MysqlBackupSpec struct {
-	Host           string         `json:"host"`
-	Port           string         `json:"port"`
-	Username       string         `json:"username"`
-	BackupType     string         `json:"backupType"`
-	ClusterRef     ClusterRefSpec `json:"clusterRef"`
-	StorageRef     StorageRefSpec `json:"storageRef"`
-	Database       string         `json:"database"`
-	SecretRef      SecretRefSpec  `json:"secretRef"`
-	MaxJobs        int            `json:"maxJobs"`
-	FailedJobs     []string       `json:"failedJobs,omitempty"`
-	SuccessfulJobs []string       `json:"successfulJobs,omitempty"`
-	JobCount       int            `json:"JobCount,omitempty"`
+	Host       string         `json:"host"`
+	Port       string         `json:"port"`
+	Username   string         `json:"username"`
+	BackupType string         `json:"backupType"`
+	ClusterRef ClusterRefSpec `json:"clusterRef"`
+	StorageRef StorageRefSpec `json:"storageRef"`
+	Database   string         `json:"database"`
+	SecretRef  SecretRefSpec  `json:"secretRef"`
+	MaxJobs    int            `json:"maxJobs"`
 }
 
 // ClusterRefSpec defines the ClusterRef
@@ -58,7 +55,10 @@ type SecretRefSpec struct {
 
 // MysqlBackupStatus defines the observed state of MysqlBackup
 type MysqlBackupStatus struct {
-	BackupStatus string `json:"backupStatus"`
+	BackupStatus   string   `json:"backupStatus"`
+	FailedJobs     []string `json:"failedJobs,omitempty"`
+	SuccessfulJobs []string `json:"successfulJobs,omitempty"`
+	JobCount       int      `json:"JobCount,omitempty"`
 }
 
 // +kubebuilder:object:root=true

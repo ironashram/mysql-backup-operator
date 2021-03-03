@@ -36,8 +36,6 @@ spec:
         spec:
           description: MysqlBackupSpec defines the desired state of MysqlBackup
           properties:
-            JobCount:
-              type: integer
             backupType:
               type: string
             clusterRef:
@@ -53,10 +51,6 @@ spec:
               type: object
             database:
               type: string
-            failedJobs:
-              items:
-                type: string
-              type: array
             host:
               type: string
             maxJobs:
@@ -82,10 +76,6 @@ spec:
               - bucket
               - minioEndpoint
               type: object
-            successfulJobs:
-              items:
-                type: string
-              type: array
             username:
               type: string
           required:
@@ -102,8 +92,18 @@ spec:
         status:
           description: MysqlBackupStatus defines the observed state of MysqlBackup
           properties:
+            JobCount:
+              type: integer
             backupStatus:
               type: string
+            failedJobs:
+              items:
+                type: string
+              type: array
+            successfulJobs:
+              items:
+                type: string
+              type: array
           required:
           - backupStatus
           type: object

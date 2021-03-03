@@ -83,16 +83,12 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		}
 		if len(globalJobList.Items) >= mysqlbackup.Spec.MaxJobs {
 			log.Info("Max number of jobs per database reached")
-			updateStatus(r, mysqlbackup, "NotReady")
+			updateStatus(r, mysqlbackup, "NotReady", mysqlbackup.Status.JobCount, mysqlbackup.Status.SuccessfulJobs, mysqlbackup.Status.FailedJobs)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		// Set creatingBackup status and requeue
-		mysqlbackup.Status.BackupStatus = "createJob"
-		err := r.Status().Update(ctx, mysqlbackup)
-		if err != nil {
-			log.Error(err, "Failed to update cr status")
-			return ctrl.Result{}, err
-		}
+		// Set createJob status and requeue
+		updateStatus(r, mysqlbackup, "createJob", mysqlbackup.Status.JobCount, mysqlbackup.Status.SuccessfulJobs, mysqlbackup.Status.FailedJobs)
+
 		return ctrl.Result{Requeue: true}, nil
 
 	case "createJob":
@@ -118,7 +114,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 				return ctrl.Result{}, err
 			}
 			log.Info("Job Created Successfully")
-			updateStatus(r, mysqlbackup, "checkJob")
+			updateStatus(r, mysqlbackup, "checkJob", mysqlbackup.Status.JobCount, mysqlbackup.Status.SuccessfulJobs, mysqlbackup.Status.FailedJobs)
 		} else if len(jobs.Items) > 0 {
 			log.Info("Job already present")
 			return ctrl.Result{Requeue: false}, nil
@@ -146,29 +142,15 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			jobStatus := getjobStatus(jobList.Items)
 			for obj, objStatus := range jobStatus {
 				if objStatus.Succeeded == 1 {
-					if !contains(mysqlbackup.Spec.SuccessfulJobs, obj) {
-						mysqlbackup.Spec.SuccessfulJobs = append(mysqlbackup.Spec.SuccessfulJobs, obj)
-						mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
+					if !contains(mysqlbackup.Status.SuccessfulJobs, obj) {
 						log.Info("Job successful, adding to cr")
-						err := r.Update(ctx, mysqlbackup)
-						if err != nil {
-							log.Error(err, "Failed to update cr")
-							return ctrl.Result{}, err
-						}
-						updateStatus(r, mysqlbackup, "Ready")
+						updateStatus(r, mysqlbackup, "Ready", mysqlbackup.Status.JobCount+1, append(mysqlbackup.Status.SuccessfulJobs, obj), mysqlbackup.Status.FailedJobs)
 						return ctrl.Result{Requeue: true}, nil
 					}
 				} else if objStatus.Failed == 1 {
-					if !contains(mysqlbackup.Spec.FailedJobs, obj) {
-						mysqlbackup.Spec.FailedJobs = append(mysqlbackup.Spec.FailedJobs, obj)
-						mysqlbackup.Spec.JobCount = mysqlbackup.Spec.JobCount + 1
+					if !contains(mysqlbackup.Status.FailedJobs, obj) {
 						log.Info("Job failed, adding to cr")
-						err := r.Update(ctx, mysqlbackup)
-						if err != nil {
-							log.Error(err, "Failed to update cr")
-							return ctrl.Result{}, err
-						}
-						updateStatus(r, mysqlbackup, "NotReady")
+						updateStatus(r, mysqlbackup, "NotReady", mysqlbackup.Status.JobCount+1, mysqlbackup.Status.SuccessfulJobs, append(mysqlbackup.Status.FailedJobs, obj))
 						return ctrl.Result{Requeue: true}, nil
 					}
 				} else if objStatus.Active == 1 {
@@ -178,7 +160,7 @@ func (r *MysqlBackupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			}
 		} else if len(jobList.Items) > 1 {
 			log.Info("Too many jobs, probable race condition")
-			updateStatus(r, mysqlbackup, "NotReady")
+			updateStatus(r, mysqlbackup, "NotReady", mysqlbackup.Status.JobCount, mysqlbackup.Status.SuccessfulJobs, mysqlbackup.Status.FailedJobs)
 
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -266,9 +248,12 @@ func (r *MysqlBackupReconciler) mysqlJob(m *m1kcloudv1alpha1.MysqlBackup) *batch
 }
 
 // updateStatus sets the given status for the cr
-func updateStatus(r *MysqlBackupReconciler, m *m1kcloudv1alpha1.MysqlBackup, status string) bool {
+func updateStatus(r *MysqlBackupReconciler, m *m1kcloudv1alpha1.MysqlBackup, status string, jobCount int, successfulJobs []string, failedJobs []string) bool {
 	ctx := context.Background()
 	m.Status.BackupStatus = status
+	m.Status.JobCount = jobCount
+	m.Status.SuccessfulJobs = successfulJobs
+	m.Status.FailedJobs = failedJobs
 	err := r.Status().Update(ctx, m)
 	if err != nil {
 		log.Error(err, "Failed to update cr status")
